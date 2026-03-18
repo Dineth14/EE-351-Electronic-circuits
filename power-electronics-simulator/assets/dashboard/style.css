@@ -1,112 +1,227 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Power Electronics Simulator — Production Dashboard Stylesheet
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── CSS Variables ───────────────────────────────────────────────────────── */
 :root {
   --bg: #0a0a0f;
   --bg-panel: #11131a;
   --bg-alt: #141925;
   --accent: #00ff88;
+  --accent-secondary: #00ccff;
   --text: #dfffe9;
   --muted: #7a8ca5;
   --warn: #ffcf4a;
   --bad: #ff5c7a;
   --good: #00ff88;
+  --grid-color: #26344c;
+  --border-color: #23324a;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --sans: 'Inter', 'Segoe UI', -apple-system, sans-serif;
+  --radius: 8px;
+  --transition: 0.2s ease;
+}
+
+/* ── Reset & Base ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 20% 10%, #162236, #0a0a0f 60%);
+  background: radial-gradient(ellipse 1400px 800px at 15% 8%, #162236, #0a0a0f 65%);
   color: var(--text);
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
 }
 
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── App Shell ────────────────────────────────────────────────────────────── */
 .app-shell {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
+/* ── Top Bar ─────────────────────────────────────────────────────────────── */
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
-  background: linear-gradient(90deg, #0b1020, #0a0a0f 60%);
-  border-bottom: 1px solid #23324a;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #0b1020 0%, #0a0a0f 60%);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .top-bar h1 {
   margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: 0.5px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+/* ── Body Grid ───────────────────────────────────────────────────────────── */
 .body-grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
 }
 
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .sidebar {
   background: var(--bg-panel);
-  border: 1px solid #26344c;
-  border-radius: 10px;
-  padding: 10px;
-  max-height: calc(100vh - 100px);
+  border-right: 1px solid var(--border-color);
+  max-height: calc(100vh - 56px);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--grid-color) transparent;
 }
 
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--grid-color);
+  border-radius: 3px;
+}
+
+/* ── Parameter Groups ────────────────────────────────────────────────────── */
 .param-group {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 8px;
-  background: #0f141f;
+  background: var(--bg-alt);
   border-radius: 6px;
+  border: 1px solid var(--grid-color);
 }
 
 .param-head {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
-  margin-bottom: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--grid-color);
 }
 
+/* ── Simulation Controls ─────────────────────────────────────────────────── */
 .sim-controls {
   display: flex;
   gap: 8px;
   margin: 10px 0;
 }
 
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
 button {
-  background: #1c2a44;
+  background: var(--bg-alt);
   color: var(--text);
-  border: 1px solid #3a4f73;
-  border-radius: 6px;
-  padding: 8px 10px;
+  border: 1px solid var(--grid-color);
+  border-radius: var(--radius);
+  padding: 8px 12px;
   cursor: pointer;
+  font-family: var(--sans);
+  font-size: 11px;
+  transition: all var(--transition);
 }
 
 button:hover {
   border-color: var(--accent);
+  background: rgba(0, 255, 136, 0.06);
 }
 
+button:active {
+  transform: scale(0.98);
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
 .main-content {
   background: var(--bg-panel);
-  border: 1px solid #26344c;
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
 }
 
+/* ── Dash Tabs Override ──────────────────────────────────────────────────── */
+.tab-container .tab {
+  background: var(--bg-alt) !important;
+  color: var(--muted) !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 10px 18px !important;
+  font-size: 12px !important;
+  transition: all var(--transition);
+}
+
+.tab-container .tab--selected {
+  background: var(--bg-panel) !important;
+  color: var(--accent) !important;
+  border-bottom: 2px solid var(--accent) !important;
+}
+
+.tab-container .tab:hover:not(.tab--selected) {
+  color: var(--text) !important;
+  background: rgba(0, 255, 136, 0.04) !important;
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
 .panel {
-  padding: 10px;
+  padding: 12px;
+  animation: fadeIn 0.3s ease;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Metric Grid ─────────────────────────────────────────────────────────── */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
 }
 
+/* ── Metric Cards ────────────────────────────────────────────────────────── */
 .metric-card {
-  border: 1px solid #31435f;
-  border-radius: 8px;
-  padding: 8px;
-  background: #0f1521;
+  border: 1px solid var(--grid-color);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: var(--bg-alt);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--grid-color);
+  transition: background var(--transition);
 }
 
 .metric-card h4,
@@ -114,23 +229,145 @@ button:hover {
   margin: 0;
 }
 
+.metric-card h4 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+}
+
 .metric-card p {
-  margin-top: 6px;
-  font-weight: 600;
+  margin-top: 4px;
+  font-weight: 700;
+  font-family: var(--mono);
 }
 
 .metric-card.good {
-  border-color: var(--good);
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.metric-card.good::before {
+  background: var(--good);
 }
 
 .metric-card.warn {
-  border-color: var(--warn);
+  border-color: rgba(255, 207, 74, 0.3);
+}
+
+.metric-card.warn::before {
+  background: var(--warn);
 }
 
 .metric-card.bad {
-  border-color: var(--bad);
+  border-color: rgba(255, 92, 122, 0.3);
 }
 
+.metric-card.bad::before {
+  background: var(--bad);
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Waveform Panel ──────────────────────────────────────────────────────── */
+.waveform-toolbar {
+  background: var(--bg-alt);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* ── Spectrum Panel ──────────────────────────────────────────────────────── */
+.spectrum-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Theory Panel ────────────────────────────────────────────────────────── */
+.theory-panel {
+  max-width: 900px;
+}
+
+/* ── Dash Dropdown Override ──────────────────────────────────────────────── */
+.Select-control {
+  background: var(--bg-alt) !important;
+  border-color: var(--grid-color) !important;
+}
+
+.Select-menu-outer {
+  background: var(--bg-panel) !important;
+  border-color: var(--grid-color) !important;
+}
+
+.Select-value-label,
+.Select-placeholder {
+  color: var(--text) !important;
+}
+
+.Select-option {
+  background: var(--bg-panel) !important;
+  color: var(--text) !important;
+}
+
+.Select-option.is-focused {
+  background: var(--bg-alt) !important;
+}
+
+/* ── Dash Slider Override ────────────────────────────────────────────────── */
+.rc-slider-rail {
+  background: var(--grid-color) !important;
+}
+
+.rc-slider-track {
+  background: var(--accent) !important;
+}
+
+.rc-slider-handle {
+  border-color: var(--accent) !important;
+  background: var(--bg-panel) !important;
+}
+
+.rc-slider-mark-text {
+  color: var(--muted) !important;
+  font-size: 9px !important;
+}
+
+/* ── Dash DataTable Override ─────────────────────────────────────────────── */
+.dash-table-container .dash-spreadsheet-container {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ── Plotly Override ─────────────────────────────────────────────────────── */
+.js-plotly-plot .modebar {
+  opacity: 0.4;
+  transition: opacity var(--transition);
+}
+
+.js-plotly-plot:hover .modebar {
+  opacity: 0.9;
+}
+
+/* ── Scrollbar Styling ───────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--grid-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .body-grid {
     grid-template-columns: 1fr;
@@ -138,5 +375,51 @@ button:hover {
 
   .sidebar {
     max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .top-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .top-bar h1 {
+    font-size: 1.1rem;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Print Styles ────────────────────────────────────────────────────────── */
+@media print {
+  .sidebar,
+  .top-bar,
+  button {
+    display: none !important;
+  }
+
+  .body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .main-content {
+    background: white;
+    color: black;
+  }
+
+  .metric-card {
+    border: 1px solid #ccc;
+    background: white;
+    color: black;
   }
 }

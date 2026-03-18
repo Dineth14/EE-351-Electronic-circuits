@@ -1,4 +1,9 @@
-"""Dash layout definition for the simulator application."""
+"""Dash layout definition for the simulator application.
+
+Defines the complete app structure: top bar with branding and theme selector,
+sidebar with converter selection and parameters, and tabbed main content
+with waveform, metrics, spectrum, and theory panels.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,7 @@ from power_electronics.converters import CONVERTER_REGISTRY
 from power_electronics.dashboard.components.metrics_panel import metrics_panel
 from power_electronics.dashboard.components.sidebar import build_param_controls, sidebar_layout
 from power_electronics.dashboard.components.spectrum_panel import spectrum_panel
+from power_electronics.dashboard.components.theory_panel import theory_panel
 from power_electronics.dashboard.components.waveform_panel import waveform_panel
 
 
@@ -22,24 +28,56 @@ def build_layout() -> html.Div:
     return html.Div(
         className="app-shell",
         children=[
+            # ── Top Bar ────────────────────────────────────────────────
             html.Div(
                 className="top-bar",
                 children=[
-                    html.H1("⚡ Power Electronics Simulator"),
-                    html.A("GitHub", href="https://github.com/example/power-electronics-simulator", target="_blank"),
-                    dcc.Dropdown(
-                        id="theme-toggle",
-                        options=[
-                            {"label": "Oscilloscope", "value": "oscilloscope"},
-                            {"label": "Dark", "value": "dark"},
-                            {"label": "Light", "value": "light"},
+                    html.Div(
+                        style={"display": "flex", "alignItems": "center", "gap": "10px"},
+                        children=[
+                            html.Span("⚡", style={"fontSize": "1.6rem"}),
+                            html.H1(
+                                "Power Electronics Simulator",
+                                style={"margin": "0", "fontSize": "1.3rem"},
+                            ),
+                            html.Span(
+                                "v1.0",
+                                style={
+                                    "fontSize": "0.7rem",
+                                    "color": "var(--muted, #7a8ca5)",
+                                    "alignSelf": "flex-end",
+                                    "marginBottom": "2px",
+                                },
+                            ),
                         ],
-                        value="oscilloscope",
-                        clearable=False,
-                        style={"width": "180px"},
+                    ),
+                    html.Div(
+                        style={"display": "flex", "alignItems": "center", "gap": "12px"},
+                        children=[
+                            html.Div(
+                                id="sim-status",
+                                style={
+                                    "fontSize": "10px",
+                                    "fontFamily": "'JetBrains Mono', monospace",
+                                    "color": "var(--muted, #7a8ca5)",
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="theme-toggle",
+                                options=[
+                                    {"label": "🟢 Oscilloscope", "value": "oscilloscope"},
+                                    {"label": "🔵 Dark Engineering", "value": "dark"},
+                                    {"label": "⚪ Light Paper", "value": "light"},
+                                ],
+                                value="oscilloscope",
+                                clearable=False,
+                                style={"width": "200px"},
+                            ),
+                        ],
                     ),
                 ],
             ),
+            # ── Body: Sidebar + Main Content ───────────────────────────
             html.Div(
                 className="body-grid",
                 children=[
@@ -51,20 +89,33 @@ def build_layout() -> html.Div:
                                 id="main-tabs",
                                 value="waveforms",
                                 children=[
-                                    dcc.Tab(label="Waveforms", value="waveforms", children=[waveform_panel()]),
-                                    dcc.Tab(label="Metrics Dashboard", value="metrics", children=[metrics_panel()]),
-                                    dcc.Tab(label="Frequency Spectrum", value="spectrum", children=[spectrum_panel()]),
                                     dcc.Tab(
-                                        label="Theory & Equations",
+                                        label="📈 Waveforms",
+                                        value="waveforms",
+                                        children=[waveform_panel()],
+                                    ),
+                                    dcc.Tab(
+                                        label="📊 Metrics",
+                                        value="metrics",
+                                        children=[metrics_panel()],
+                                    ),
+                                    dcc.Tab(
+                                        label="📐 Spectrum",
+                                        value="spectrum",
+                                        children=[spectrum_panel()],
+                                    ),
+                                    dcc.Tab(
+                                        label="📖 Theory",
                                         value="theory",
-                                        children=[html.Div(id="theory-panel", className="panel theory-panel")],
+                                        children=[theory_panel()],
                                     ),
                                 ],
-                            )
+                            ),
                         ],
                     ),
                 ],
             ),
+            # ── Hidden Stores & Intervals ──────────────────────────────
             dcc.Store(id="result-store"),
             dcc.Store(id="history-store", data=[]),
             dcc.Interval(id="sweep-interval", interval=400, n_intervals=0, disabled=True),

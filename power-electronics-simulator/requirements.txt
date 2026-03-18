@@ -7,4 +7,3 @@ dash-katex==0.0.1
 ipywidgets==8.1.5
 schemdraw==0.19
 pandas==2.2.3
-reportlab==4.1.1

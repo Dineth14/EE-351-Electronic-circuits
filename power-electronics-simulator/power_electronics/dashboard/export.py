@@ -1,431 +1,269 @@
-"""Export utilities for simulation results (PNG, SVG, CSV, JSON, PDF).
+"""Export system for simulation results in multiple formats.
 
-Supports exporting simulation results in multiple formats for further analysis,
-publication, or sharing with colleagues.
+Supports CSV, JSON, PNG, SVG, and PDF export of waveforms, metrics,
+and complete simulation reports.
 """
 
 from __future__ import annotations
 
-import base64
+import csv
 import io
 import json
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
-import plotly.graph_objects as go
-from plotly.io import to_image, to_json
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    PageTemplate,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-    Paragraph,
-    Image,
-    KeepTogether,
-)
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-
-from power_electronics.core.base_converter import SimulationResult
 
 
-# ==============================================================================
-# PLOTLY FIGURE EXPORT
-# ==============================================================================
+# ---------------------------------------------------------------------------
+# CSV Export
+# ---------------------------------------------------------------------------
 
-
-def export_png(
-    figure: go.Figure, filename: str | None = None, scale: int = 3
-) -> bytes:
-    """Export Plotly figure to PNG format.
-
-    Parameters
-    ----------
-    figure:
-        Plotly Figure object.
-    filename:
-        Optional output filename. If None, returns bytes.
-    scale:
-        Pixel scale factor (default 3 for high quality).
+def export_csv(
+    time: np.ndarray,
+    signals: dict[str, np.ndarray],
+    metrics: dict[str, float],
+    converter_name: str,
+) -> str:
+    """Export simulation waveforms and metrics as CSV text.
 
     Returns
     -------
-    bytes
-        PNG image bytes.
+    str
+        CSV-formatted string ready for download.
     """
-    try:
-        png_bytes = to_image(figure, format="png", scale=scale, width=1200, height=600)
-        if filename:
-            with open(filename, "wb") as f:
-                f.write(png_bytes)
-        return png_bytes
-    except Exception as e:
-        raise IOError(f"Failed to export PNG: {e}") from e
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+
+    # Header: metadata comment
+    writer.writerow([f"# Converter: {converter_name}"])
+    writer.writerow([f"# Exported: {datetime.now(timezone.utc).isoformat()}"])
+    writer.writerow([])
+
+    # Metrics section
+    writer.writerow(["# Metrics"])
+    writer.writerow(["Metric", "Value"])
+    for k, v in metrics.items():
+        writer.writerow([k, f"{v:.6g}"])
+    writer.writerow([])
+
+    # Waveform section
+    sig_names = list(signals.keys())
+    writer.writerow(["# Waveforms"])
+    writer.writerow(["time_s"] + sig_names)
+    for i in range(len(time)):
+        row = [f"{time[i]:.9g}"]
+        for name in sig_names:
+            val = signals[name]
+            if val.ndim > 1:
+                val = val[:, 0]
+            row.append(f"{val[i]:.9g}")
+        writer.writerow(row)
+
+    return buf.getvalue()
 
 
-def export_svg(figure: go.Figure, filename: str | None = None) -> bytes:
-    """Export Plotly figure to SVG format.
+# ---------------------------------------------------------------------------
+# JSON Export
+# ---------------------------------------------------------------------------
 
-    Parameters
-    ----------
-    figure:
-        Plotly Figure object.
-    filename:
-        Optional output filename. If None, returns bytes.
+def export_json(
+    time: np.ndarray,
+    signals: dict[str, np.ndarray],
+    metrics: dict[str, float],
+    converter_name: str,
+    params: dict,
+) -> str:
+    """Export complete simulation data as JSON.
 
     Returns
     -------
-    bytes
-        SVG image bytes.
+    str
+        JSON string with metadata, parameters, metrics, and sampled waveforms.
     """
-    try:
-        svg_bytes = to_image(figure, format="svg", width=1200, height=600)
-        if filename:
-            with open(filename, "wb") as f:
-                f.write(svg_bytes)
-        return svg_bytes
-    except Exception as e:
-        raise IOError(f"Failed to export SVG: {e}") from e
+    # Downsample to max 2000 points for JSON size
+    n = len(time)
+    stride = max(1, n // 2000)
 
-
-# ==============================================================================
-# DATA EXPORT (CSV, JSON)
-# ==============================================================================
-
-
-def export_csv(result: SimulationResult, filename: str | None = None) -> bytes:
-    """Export simulation result to CSV format.
-
-    Time-domain data with all signals as columns. Includes header row with units.
-
-    Parameters
-    ----------
-    result:
-        SimulationResult object.
-    filename:
-        Optional output filename. If None, returns bytes.
-
-    Returns
-    -------
-    bytes
-        CSV data as bytes (UTF-8).
-    """
-    lines: list[str] = []
-
-    # Header: signal names
-    header_names = ["Time (s)"] + list(result.signals.keys())
-    lines.append(",".join(header_names))
-
-    # Data rows
-    n_samples = len(result.time)
-    for i in range(n_samples):
-        row_values = [str(result.time[i])]
-        for signal_name in result.signals.keys():
-            row_values.append(str(result.signals[signal_name][i]))
-        lines.append(",".join(row_values))
-
-    csv_text = "\n".join(lines)
-    csv_bytes = csv_text.encode("utf-8")
-
-    if filename:
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(csv_text)
-
-    return csv_bytes
-
-
-def export_json(result: SimulationResult, filename: str | None = None) -> bytes:
-    """Export full SimulationResult to JSON format.
-
-    Parameters
-    ----------
-    result:
-        SimulationResult object.
-    filename:
-        Optional output filename. If None, returns bytes.
-
-    Returns
-    -------
-    bytes
-        JSON data as bytes (UTF-8).
-    """
-    data: dict[str, Any] = {
-        "converter_name": result.converter_name,
-        "timestamp": datetime.now().isoformat(),
-        "version": "0.2.0",
-        "parameters": result.params,
-        "metrics": result.metrics,
-        "time": result.time.tolist(),
-        "signals": {
-            name: signal.tolist() for name, signal in result.signals.items()
+    payload = {
+        "metadata": {
+            "converter": converter_name,
+            "exported": datetime.now(timezone.utc).isoformat(),
+            "samples": n,
+            "exported_samples": len(time[::stride]),
+        },
+        "parameters": {k: _serialize(v) for k, v in params.items()},
+        "metrics": {k: round(v, 6) for k, v in metrics.items()},
+        "waveforms": {
+            "time_s": time[::stride].tolist(),
+            **{
+                name: (val[:, 0] if val.ndim > 1 else val)[::stride].tolist()
+                for name, val in signals.items()
+            },
         },
     }
-
-    json_str = json.dumps(data, indent=2)
-    json_bytes = json_str.encode("utf-8")
-
-    if filename:
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(json_str)
-
-    return json_bytes
+    return json.dumps(payload, indent=2)
 
 
-# ==============================================================================
-# PDF REPORT GENERATION
-# ==============================================================================
+def _serialize(v):
+    """Convert numpy scalars and arrays for JSON."""
+    if isinstance(v, (np.integer,)):
+        return int(v)
+    if isinstance(v, (np.floating,)):
+        return float(v)
+    if isinstance(v, np.ndarray):
+        return v.tolist()
+    return v
 
 
-def export_report_pdf(
-    result: SimulationResult,
-    waveform_figure: go.Figure | None = None,
-    spectrum_figure: go.Figure | None = None,
-    filename: str | None = None,
+# ---------------------------------------------------------------------------
+# PNG / SVG Figure Export
+# ---------------------------------------------------------------------------
+
+def export_figure_bytes(
+    time: np.ndarray,
+    signals: dict[str, np.ndarray],
+    selected_signals: list[str] | None = None,
+    fmt: str = "png",
+    dpi: int = 150,
+    title: str = "Simulation Waveforms",
 ) -> bytes:
-    """Generate professional PDF report from simulation result.
-
-    Report includes:
-      - Converter name and parameters table
-      - Waveform plot
-      - Metrics table
-      - Harmonic spectrum
-      - Simulation settings
-      - Footer with timestamp and version
+    """Render matplotlib figure to bytes in PNG or SVG format.
 
     Parameters
     ----------
-    result:
-        SimulationResult object.
-    waveform_figure:
-        Optional Plotly waveform figure to include.
-    spectrum_figure:
-        Optional Plotly spectrum figure to include.
-    filename:
-        Optional output filename. If None, returns bytes.
+    time : np.ndarray
+        Time vector.
+    signals : dict[str, np.ndarray]
+        Signal dictionary.
+    selected_signals : list[str] or None
+        Signals to include. None = all.
+    fmt : str
+        'png' or 'svg'.
+    dpi : int
+        DPI for raster export.
+    title : str
+        Figure title.
 
     Returns
     -------
     bytes
-        PDF data as bytes.
+        Image data.
     """
-    pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        pdf_buffer,
-        pagesize=letter,
-        rightMargin=0.5 * inch,
-        leftMargin=0.5 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-    )
+    names = selected_signals or list(signals.keys())
+    n = len(names)
+    fig, axes = plt.subplots(n, 1, figsize=(12, max(3, 2.0 * n)), sharex=True)
+    if n == 1:
+        axes = [axes]
 
-    # Styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "CustomTitle",
-        parent=styles["Heading1"],
-        fontSize=24,
-        textColor=colors.HexColor("#1565c0"),
-        spaceAfter=6,
-        alignment=TA_CENTER,
-    )
-    heading_style = ParagraphStyle(
-        "CustomHeading",
-        parent=styles["Heading2"],
-        fontSize=14,
-        textColor=colors.HexColor("#1565c0"),
-        spaceAfter=8,
-        spaceBefore=12,
-    )
+    colors = ["#00ff88", "#00ccff", "#ff6b9d", "#ffd700", "#a78bfa",
+              "#fb923c", "#34d399", "#f472b6", "#60a5fa", "#facc15"]
 
-    story: list[Any] = []
+    for i, (ax, name) in enumerate(zip(axes, names)):
+        val = signals.get(name, np.zeros_like(time))
+        if val.ndim > 1:
+            val = val[:, 0]
+        ax.plot(time, val, linewidth=1.2, color=colors[i % len(colors)])
+        ax.set_ylabel(name, fontsize=10)
+        ax.grid(True, alpha=0.3, linestyle=":")
+        ax.tick_params(labelsize=9)
 
-    # Title
-    title = Paragraph(
-        f"Power Converter Analysis Report: {result.converter_name}",
-        title_style,
-    )
-    story.append(title)
-    story.append(Spacer(1, 0.2 * inch))
+    axes[0].set_title(title, fontsize=13, fontweight="bold")
+    axes[-1].set_xlabel("Time (s)", fontsize=10)
+    fig.tight_layout()
 
-    # Parameters Table
-    story.append(Paragraph("Simulation Parameters", heading_style))
-    param_data = [["Parameter", "Value"]]
-    for key, val in result.params.items():
-        param_data.append([str(key), str(val)])
-
-    param_table = Table(param_data, colWidths=[2.5 * inch, 2.5 * inch])
-    param_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1565c0")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 11),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                ("GRID", (0, 0), (-1, -1), 1, colors.grey),
-            ]
-        )
-    )
-    story.append(param_table)
-    story.append(Spacer(1, 0.2 * inch))
-
-    # Metrics Table
-    story.append(Paragraph("Simulation Metrics", heading_style))
-    metric_data = [["Metric", "Value"]]
-    for key, val in result.metrics.items():
-        if isinstance(val, float):
-            metric_data.append([str(key), f"{val:.4f}"])
-        else:
-            metric_data.append([str(key), str(val)])
-
-    metric_table = Table(metric_data, colWidths=[2.5 * inch, 2.5 * inch])
-    metric_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#c62828")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 11),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-                ("BACKGROUND", (0, 1), (-1, -1), colors.lightblue),
-                ("GRID", (0, 0), (-1, -1), 1, colors.grey),
-            ]
-        )
-    )
-    story.append(metric_table)
-    story.append(Spacer(1, 0.2 * inch))
-
-    # Waveform Plot (if provided)
-    if waveform_figure is not None:
-        try:
-            story.append(Paragraph("Waveforms", heading_style))
-            png_bytes = export_png(waveform_figure)
-            img_buffer = io.BytesIO(png_bytes)
-            img = Image(img_buffer, width=5.5 * inch, height=2.5 * inch)
-            story.append(img)
-            story.append(Spacer(1, 0.2 * inch))
-        except Exception:
-            pass  # Silently skip if image generation fails
-
-    # Spectrum Plot (if provided)
-    if spectrum_figure is not None:
-        try:
-            story.append(Paragraph("Harmonic Spectrum", heading_style))
-            png_bytes = export_png(spectrum_figure)
-            img_buffer = io.BytesIO(png_bytes)
-            img = Image(img_buffer, width=5.5 * inch, height=2.5 * inch)
-            story.append(img)
-            story.append(Spacer(1, 0.2 * inch))
-        except Exception:
-            pass  # Silently skip if image generation fails
-
-    # Footer
-    story.append(Spacer(1, 0.3 * inch))
-    footer_text = (
-        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} "
-        "| Power Electronics Simulator v0.2.0"
-    )
-    footer = Paragraph(footer_text, ParagraphStyle(
-        "Footer",
-        parent=styles["Normal"],
-        fontSize=8,
-        textColor=colors.grey,
-        alignment=TA_CENTER,
-    ))
-    story.append(footer)
-
-    # Build PDF
-    doc.build(story)
-    pdf_bytes = pdf_buffer.getvalue()
-
-    if filename:
-        with open(filename, "wb") as f:
-            f.write(pdf_bytes)
-
-    return pdf_bytes
+    buf = io.BytesIO()
+    fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight",
+                facecolor="#0a0a0f", edgecolor="none")
+    plt.close(fig)
+    return buf.getvalue()
 
 
-# ==============================================================================
-# BATCH EXPORT UTILITIES
-# ==============================================================================
+# ---------------------------------------------------------------------------
+# PDF Report (text-based, no reportlab dependency required)
+# ---------------------------------------------------------------------------
 
+def export_pdf_report(
+    time: np.ndarray,
+    signals: dict[str, np.ndarray],
+    metrics: dict[str, float],
+    converter_name: str,
+    params: dict,
+    selected_signals: list[str] | None = None,
+) -> bytes:
+    """Generate a multi-page PDF report with waveforms and metrics.
 
-def export_all_formats(
-    result: SimulationResult,
-    output_dir: str,
-    waveform_figure: go.Figure | None = None,
-    spectrum_figure: go.Figure | None = None,
-) -> dict[str, str]:
-    """Export simulation result in all formats to directory.
-
-    Parameters
-    ----------
-    result:
-        SimulationResult object.
-    output_dir:
-        Directory to save files to.
-    waveform_figure:
-        Optional waveform Plotly figure.
-    spectrum_figure:
-        Optional spectrum Plotly figure.
+    Uses matplotlib's PdfPages backend for reliable PDF generation
+    without external dependencies beyond matplotlib.
 
     Returns
     -------
-    dict[str, str]
-        Mapping of format → output filename.
+    bytes
+        PDF file data.
     """
-    import os
+    from matplotlib.backends.backend_pdf import PdfPages
 
-    os.makedirs(output_dir, exist_ok=True)
+    buf = io.BytesIO()
+    with PdfPages(buf) as pdf:
+        # Page 1: Title & Metrics
+        fig1, ax1 = plt.subplots(figsize=(8.5, 11))
+        ax1.axis("off")
+        y = 0.95
+        ax1.text(0.5, y, "Power Electronics Simulation Report",
+                 ha="center", fontsize=18, fontweight="bold", transform=ax1.transAxes)
+        y -= 0.05
+        ax1.text(0.5, y, f"Converter: {converter_name}",
+                 ha="center", fontsize=14, transform=ax1.transAxes)
+        y -= 0.03
+        ax1.text(0.5, y, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+                 ha="center", fontsize=10, color="gray", transform=ax1.transAxes)
 
-    base_name = result.converter_name.replace(" ", "_").lower()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix = f"{base_name}_{timestamp}"
+        # Parameters
+        y -= 0.06
+        ax1.text(0.1, y, "Simulation Parameters:", fontsize=12,
+                 fontweight="bold", transform=ax1.transAxes)
+        for k, v in params.items():
+            y -= 0.025
+            if y < 0.05:
+                break
+            ax1.text(0.12, y, f"{k}: {v}", fontsize=9, transform=ax1.transAxes,
+                     fontfamily="monospace")
 
-    outputs: dict[str, str] = {}
+        # Metrics
+        y -= 0.04
+        ax1.text(0.1, y, "Results:", fontsize=12,
+                 fontweight="bold", transform=ax1.transAxes)
+        for k, v in metrics.items():
+            y -= 0.025
+            if y < 0.05:
+                break
+            ax1.text(0.12, y, f"{k}: {v:.4g}", fontsize=9, transform=ax1.transAxes,
+                     fontfamily="monospace")
 
-    # CSV
-    csv_file = os.path.join(output_dir, f"{prefix}.csv")
-    export_csv(result, csv_file)
-    outputs["csv"] = csv_file
+        fig1.tight_layout()
+        pdf.savefig(fig1, facecolor="white")
+        plt.close(fig1)
 
-    # JSON
-    json_file = os.path.join(output_dir, f"{prefix}.json")
-    export_json(result, json_file)
-    outputs["json"] = json_file
+        # Page 2: Waveforms
+        names = selected_signals or list(signals.keys())[:6]
+        n = len(names)
+        fig2, axes = plt.subplots(n, 1, figsize=(8.5, max(5, 1.8 * n)), sharex=True)
+        if n == 1:
+            axes = [axes]
+        for ax, name in zip(axes, names):
+            val = signals.get(name, np.zeros_like(time))
+            if val.ndim > 1:
+                val = val[:, 0]
+            ax.plot(time, val, linewidth=0.8)
+            ax.set_ylabel(name, fontsize=9)
+            ax.grid(True, alpha=0.3, linestyle=":")
+            ax.tick_params(labelsize=8)
+        axes[0].set_title(f"{converter_name} — Waveforms", fontsize=12)
+        axes[-1].set_xlabel("Time (s)", fontsize=9)
+        fig2.tight_layout()
+        pdf.savefig(fig2, facecolor="white")
+        plt.close(fig2)
 
-    # PNG (if waveform figure provided)
-    if waveform_figure is not None:
-        try:
-            png_file = os.path.join(output_dir, f"{prefix}_waveform.png")
-            export_png(waveform_figure, png_file)
-            outputs["png"] = png_file
-        except Exception:
-            pass
-
-    # SVG (if waveform figure provided)
-    if waveform_figure is not None:
-        try:
-            svg_file = os.path.join(output_dir, f"{prefix}_waveform.svg")
-            export_svg(waveform_figure, svg_file)
-            outputs["svg"] = svg_file
-        except Exception:
-            pass
-
-    # PDF Report
-    try:
-        pdf_file = os.path.join(output_dir, f"{prefix}_report.pdf")
-        export_report_pdf(result, waveform_figure, spectrum_figure, pdf_file)
-        outputs["pdf"] = pdf_file
-    except Exception:
-        pass
-
-    return outputs
+    return buf.getvalue()

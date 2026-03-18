@@ -1,237 +1,191 @@
-"""Publication-quality theme system for dashboard visualization.
+"""Publication-quality plot themes with dataclass-based theme definitions.
 
-Three complete themes:
-  1. OSCILLOSCOPE - Lab instrument aesthetic (green-on-black)
-  2. DARK_ENGINEERING - Modern dark engineering theme (purple-blue)
-  3. LIGHT_PAPER - Publication/paper quality (high contrast, B&W compatible)
+Three visual profiles suitable for dashboards, publications, and lab use:
+- **oscilloscope**: Phosphor-green on black, oscilloscope CRT aesthetic
+- **dark**: Engineering dark mode with blue accent
+- **light**: Clean white-paper style for printed reports
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
+class ThemeColors:
+    """Complete color specification for a visual theme."""
+
+    paper_bgcolor: str
+    plot_bgcolor: str
+    font_color: str
+    grid_color: str
+    accent: str
+    accent_secondary: str
+    text_secondary: str
+    border_color: str
+    card_bgcolor: str
+    success: str
+    warning: str
+    danger: str
+    trace_colors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ThemeTypography:
+    """Font specifications for a theme."""
+
+    family: str = "'JetBrains Mono', 'Fira Code', 'Consolas', monospace"
+    size_title: int = 14
+    size_axis: int = 11
+    size_tick: int = 10
+    size_annotation: int = 9
+
+
+@dataclass(frozen=True, slots=True)
+class ThemeLayout:
+    """Layout constants for figure styling."""
+
+    margin: dict = field(default_factory=lambda: {"l": 55, "r": 20, "t": 45, "b": 40})
+    grid_width: float = 0.5
+    grid_dash: str = "dot"
+    line_width: float = 1.5
+    marker_size: int = 5
+    bar_opacity: float = 0.85
+
+
+@dataclass(frozen=True, slots=True)
 class Theme:
-    """Complete visual theme definition.
-
-    Parameters
-    ----------
-    name:
-        Theme identifier.
-    bg_primary:
-        Main background color (hex).
-    bg_secondary:
-        Panel/card background color (hex).
-    bg_plot:
-        Plot area background color (hex).
-    grid_color:
-        Plot grid line color (hex or rgba).
-    text_primary:
-        Primary text color (hex).
-    text_secondary:
-        Secondary/muted text color (hex).
-    accent_1:
-        Primary accent color (hex).
-    accent_2:
-        Secondary accent color (hex).
-    accent_3:
-        Tertiary accent color (hex).
-    signal_colors:
-        List of 12 distinct colors for signal traces.
-    good_color:
-        Color for good metric threshold (hex).
-    warn_color:
-        Color for warning metric threshold (hex).
-    danger_color:
-        Color for danger/critical metric threshold (hex).
-    """
+    """Complete theme definition combining colors, typography, and layout."""
 
     name: str
-    bg_primary: str
-    bg_secondary: str
-    bg_plot: str
-    grid_color: str
-    text_primary: str
-    text_secondary: str
-    accent_1: str
-    accent_2: str
-    accent_3: str
-    signal_colors: list[str]
-    good_color: str
-    warn_color: str
-    danger_color: str
-
-    def to_plotly_template(self) -> dict[str, str | int | float]:
-        """Convert to Plotly layout template dictionary."""
-        return {
-            "background_color": self.bg_plot,
-            "font_color": self.text_primary,
-            "grid_color": self.grid_color,
-            "accent_color": self.accent_1,
-        }
-
-    def to_css_variables(self) -> dict[str, str]:
-        """Generate CSS custom properties for dashboard styling."""
-        return {
-            "--bg-primary": self.bg_primary,
-            "--bg-secondary": self.bg_secondary,
-            "--bg-plot": self.bg_plot,
-            "--grid-color": self.grid_color,
-            "--text-primary": self.text_primary,
-            "--text-secondary": self.text_secondary,
-            "--accent-1": self.accent_1,
-            "--accent-2": self.accent_2,
-            "--accent-3": self.accent_3,
-            "--good-color": self.good_color,
-            "--warn-color": self.warn_color,
-            "--danger-color": self.danger_color,
-        }
+    display_name: str
+    colors: ThemeColors
+    typography: ThemeTypography = field(default_factory=ThemeTypography)
+    layout: ThemeLayout = field(default_factory=ThemeLayout)
 
 
-# ==============================================================================
-# THEME 1: OSCILLOSCOPE
-# ==============================================================================
-# Lab instrument aesthetic inspired by analog oscilloscopes.
-# Green phosphor display on black (classic CRT look).
-# Excellent for technical presentations and dark environments.
-# ==============================================================================
+# ---------------------------------------------------------------------------
+# Theme Definitions
+# ---------------------------------------------------------------------------
 
-OSCILLOSCOPE = Theme(
-    name="Oscilloscope",
-    bg_primary="#050a05",
-    bg_secondary="#0a140a",
-    bg_plot="#050a05",
-    grid_color="rgba(0,255,80,0.12)",
-    text_primary="#00ff50",
-    text_secondary="#00aa35",
-    accent_1="#00ff50",
-    accent_2="#ffcc00",
-    accent_3="#ff5500",
-    signal_colors=[
-        "#00ff50",  # Bright green
-        "#ffcc00",  # Yellow
-        "#00ccff",  # Cyan
-        "#ff5500",  # Orange
-        "#ff00ff",  # Magenta
-        "#ffffff",  # White
-        "#ff9900",  # Light orange
-        "#00ffff",  # Aqua
-        "#ff0055",  # Hot pink
-        "#aaff00",  # Lime
-        "#aa00ff",  # Violet
-        "#ff6680",  # Coral
-    ],
-    good_color="#00ff50",
-    warn_color="#ffcc00",
-    danger_color="#ff3300",
+OSCILLOSCOPE_THEME = Theme(
+    name="oscilloscope",
+    display_name="Oscilloscope",
+    colors=ThemeColors(
+        paper_bgcolor="#050508",
+        plot_bgcolor="#07090d",
+        font_color="#9ef5c8",
+        grid_color="#0f2a1e",
+        accent="#00ff88",
+        accent_secondary="#00ccff",
+        text_secondary="#5a8a6e",
+        border_color="#133126",
+        card_bgcolor="#080c10",
+        success="#00ff88",
+        warning="#ffd700",
+        danger="#ff3860",
+        trace_colors=(
+            "#00ff88", "#00ccff", "#ff6b9d", "#ffd700",
+            "#a78bfa", "#fb923c", "#34d399", "#f472b6",
+            "#60a5fa", "#facc15",
+        ),
+    ),
+    typography=ThemeTypography(
+        family="'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+    ),
+    layout=ThemeLayout(grid_dash="dot", grid_width=0.4, line_width=1.8),
 )
 
-# ==============================================================================
-# THEME 2: DARK ENGINEERING
-# ==============================================================================
-# Modern dark theme with engineering aesthetics.
-# Purple-blue color scheme with high contrast.
-# Best for long work sessions and eye comfort.
-# ==============================================================================
-
-DARK_ENGINEERING = Theme(
-    name="Dark Engineering",
-    bg_primary="#0d0d14",
-    bg_secondary="#13131e",
-    bg_plot="#0a0a10",
-    grid_color="rgba(100,120,255,0.1)",
-    text_primary="#e8eaf6",
-    text_secondary="#9fa8da",
-    accent_1="#7c83ff",
-    accent_2="#00e5ff",
-    accent_3="#ff6e40",
-    signal_colors=[
-        "#7c83ff",  # Indigo
-        "#00e5ff",  # Light blue
-        "#69ff47",  # Light green
-        "#ff6e40",  # Deep orange
-        "#ffd740",  # Amber
-        "#ea80fc",  # Light purple
-        "#64ffda",  # Cyan
-        "#ff4081",  # Pink
-        "#40c4ff",  # Light cyan
-        "#ccff90",  # Lime green
-        "#ffab40",  # Orange
-        "#b388ff",  # Light purple
-    ],
-    good_color="#69ff47",
-    warn_color="#ffd740",
-    danger_color="#ff1744",
+DARK_THEME = Theme(
+    name="dark",
+    display_name="Dark Engineering",
+    colors=ThemeColors(
+        paper_bgcolor="#0a0a0f",
+        plot_bgcolor="#11131a",
+        font_color="#e6f1ff",
+        grid_color="#2d3345",
+        accent="#3b82f6",
+        accent_secondary="#8b5cf6",
+        text_secondary="#7a8ca5",
+        border_color="#23324a",
+        card_bgcolor="#0f1521",
+        success="#22c55e",
+        warning="#eab308",
+        danger="#ef4444",
+        trace_colors=(
+            "#3b82f6", "#ef4444", "#22c55e", "#eab308",
+            "#a855f7", "#f97316", "#06b6d4", "#ec4899",
+            "#84cc16", "#14b8a6",
+        ),
+    ),
+    typography=ThemeTypography(
+        family="'Inter', 'Segoe UI', -apple-system, sans-serif",
+    ),
+    layout=ThemeLayout(grid_dash="dot", grid_width=0.5, line_width=1.5),
 )
 
-# ==============================================================================
-# THEME 3: LIGHT / PAPER
-# ==============================================================================
-# Publication quality theme for printed reports and presentations.
-# High contrast, B&W compatible, suits traditional academic environment.
-# Excellent for colorblind-friendly output.
-# ==============================================================================
-
-LIGHT_PAPER = Theme(
-    name="Light / Paper",
-    bg_primary="#fafafa",
-    bg_secondary="#ffffff",
-    bg_plot="#ffffff",
-    grid_color="rgba(0,0,0,0.08)",
-    text_primary="#212121",
-    text_secondary="#616161",
-    accent_1="#1565c0",
-    accent_2="#c62828",
-    accent_3="#2e7d32",
-    signal_colors=[
-        "#1565c0",  # Deep blue
-        "#c62828",  # Deep red
-        "#2e7d32",  # Deep green
-        "#6a1b9a",  # Deep purple
-        "#e65100",  # Deep orange
-        "#00838f",  # Teal
-        "#558b2f",  # Dark green
-        "#4527a0",  # Indigo
-        "#ad1457",  # Pink
-        "#0277bd",  # Light blue
-        "#37474f",  # Blue grey
-        "#f57f17",  # Amber
-    ],
-    good_color="#2e7d32",
-    warn_color="#f57c00",
-    danger_color="#c62828",
+LIGHT_THEME = Theme(
+    name="light",
+    display_name="Light Paper",
+    colors=ThemeColors(
+        paper_bgcolor="#f8fafc",
+        plot_bgcolor="#ffffff",
+        font_color="#0f172a",
+        grid_color="#e2e8f0",
+        accent="#0ea5e9",
+        accent_secondary="#7c3aed",
+        text_secondary="#64748b",
+        border_color="#cbd5e1",
+        card_bgcolor="#ffffff",
+        success="#16a34a",
+        warning="#ca8a04",
+        danger="#dc2626",
+        trace_colors=(
+            "#0ea5e9", "#dc2626", "#16a34a", "#ca8a04",
+            "#7c3aed", "#ea580c", "#0891b2", "#db2777",
+            "#65a30d", "#0d9488",
+        ),
+    ),
+    typography=ThemeTypography(
+        family="'Inter', 'Helvetica Neue', Arial, sans-serif",
+        size_title=15,
+        size_axis=12,
+        size_tick=11,
+    ),
+    layout=ThemeLayout(grid_dash="solid", grid_width=0.3, line_width=1.4),
 )
 
-# ==============================================================================
-# THEME REGISTRY
-# ==============================================================================
+# ---------------------------------------------------------------------------
+# Registry — keyed by theme name for dashboard dropdown lookup
+# ---------------------------------------------------------------------------
 
 THEME_REGISTRY: dict[str, Theme] = {
-    "oscilloscope": OSCILLOSCOPE,
-    "dark_engineering": DARK_ENGINEERING,
-    "light_paper": LIGHT_PAPER,
+    "oscilloscope": OSCILLOSCOPE_THEME,
+    "dark": DARK_THEME,
+    "light": LIGHT_THEME,
 }
 
-DEFAULT_THEME = OSCILLOSCOPE
+# Backward-compatible flat dict for existing code that accesses THEMES[name]
+THEMES: dict[str, dict[str, str]] = {
+    name: {
+        "paper_bgcolor": th.colors.paper_bgcolor,
+        "plot_bgcolor": th.colors.plot_bgcolor,
+        "font_color": th.colors.font_color,
+        "grid_color": th.colors.grid_color,
+        "accent": th.colors.accent,
+    }
+    for name, th in THEME_REGISTRY.items()
+}
 
 
 def get_theme(name: str) -> Theme:
-    """Retrieve theme by name.
-
-    Parameters
-    ----------
-    name:
-        Theme identifier (case-insensitive).
-
-    Returns
-    -------
-    Theme
-        The requested theme, or DEFAULT_THEME if not found.
-    """
-    return THEME_REGISTRY.get(name.lower(), DEFAULT_THEME)
+    """Look up a theme by name, defaulting to oscilloscope."""
+    return THEME_REGISTRY.get(name, OSCILLOSCOPE_THEME)
 
 
-def list_themes() -> list[str]:
-    """Return list of available theme names."""
-    return list(THEME_REGISTRY.keys())
+def get_trace_color(theme: Theme, index: int) -> str:
+    """Get a trace color by index, cycling through available colors."""
+    colors = theme.colors.trace_colors
+    if not colors:
+        return theme.colors.accent
+    return colors[index % len(colors)]
