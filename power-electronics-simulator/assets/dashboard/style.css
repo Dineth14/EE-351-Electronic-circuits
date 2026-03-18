@@ -1,0 +1,142 @@
+:root {
+  --bg: #0a0a0f;
+  --bg-panel: #11131a;
+  --bg-alt: #141925;
+  --accent: #00ff88;
+  --text: #dfffe9;
+  --muted: #7a8ca5;
+  --warn: #ffcf4a;
+  --bad: #ff5c7a;
+  --good: #00ff88;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 20% 10%, #162236, #0a0a0f 60%);
+  color: var(--text);
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: linear-gradient(90deg, #0b1020, #0a0a0f 60%);
+  border-bottom: 1px solid #23324a;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.5px;
+}
+
+.body-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.sidebar {
+  background: var(--bg-panel);
+  border: 1px solid #26344c;
+  border-radius: 10px;
+  padding: 10px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.param-group {
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #0f141f;
+  border-radius: 6px;
+}
+
+.param-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.sim-controls {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+button {
+  background: #1c2a44;
+  color: var(--text);
+  border: 1px solid #3a4f73;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.main-content {
+  background: var(--bg-panel);
+  border: 1px solid #26344c;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.panel {
+  padding: 10px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.metric-card {
+  border: 1px solid #31435f;
+  border-radius: 8px;
+  padding: 8px;
+  background: #0f1521;
+}
+
+.metric-card h4,
+.metric-card p {
+  margin: 0;
+}
+
+.metric-card p {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.metric-card.good {
+  border-color: var(--good);
+}
+
+.metric-card.warn {
+  border-color: var(--warn);
+}
+
+.metric-card.bad {
+  border-color: var(--bad);
+}
+
+@media (max-width: 1024px) {
+  .body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    max-height: none;
+  }
+}

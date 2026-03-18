@@ -91,7 +91,8 @@ def compute_power_factor(voltage: np.ndarray, current: np.ndarray) -> float:
     if vrms < EPS or irms < EPS:
         return 0.0
     p = float(np.mean(voltage * current))
-    return float(np.clip(p / (vrms * irms), -1.0, 1.0))
+    # Report magnitude PF for display consistency across operating quadrants.
+    return float(abs(np.clip(p / (vrms * irms), -1.0, 1.0)))
 
 
 def summarize_metrics(values: Iterable[tuple[str, float]]) -> dict[str, float]:
